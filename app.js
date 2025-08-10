@@ -51,7 +51,7 @@
 
   // ---------- Event handlers ----------
   btnSaveQuarter.addEventListener('click', ()=>{
-    save();
+    save({refresh:true});
     downloadJSON(quarterSnapshot(activeQ), `tax-quarter-${activeQ+1}.json`);
   });
 
@@ -150,12 +150,12 @@
     }
   }
 
-  function save(){
+  function save(opts={refresh:false}){
     try{
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       updateGrandTotalLabel();
-      // re-render to refresh sum row accurately
-      renderQuarter();
+      updateQuarterTotals(activeQ);
+      if (opts.refresh) renderQuarter();
     }catch(e){
       alert('Save failed: ' + e.message);
     }
@@ -180,7 +180,7 @@
 
   function autosave(){
     if (autosave._t) cancelAnimationFrame(autosave._t);
-    autosave._t = requestAnimationFrame(()=> save());
+    autosave._t = requestAnimationFrame(()=> save({refresh:false}));
   }
 
   function getMonthCatValues(mIdx, cat){
@@ -199,6 +199,19 @@
   function sumQuarterCategory(qIdx, cat){
     const mIdxs = QUARTERS[qIdx].months;
     return mIdxs.reduce((acc, m)=> acc + sumMonthCategory(m, cat), 0);
+  }
+
+  
+  function updateQuarterTotals(qIdx){
+    const foot = table.querySelector('tfoot');
+    if (!foot) return;
+    const cells = foot.querySelectorAll('.sumcell');
+    // First CATS.length cells correspond to categories
+    CATS.forEach((cat, i)=>{
+      const s = sumQuarterCategory(qIdx, cat);
+      const cell = cells[i];
+      if (cell) cell.textContent = `₱ ${fmt(s)}`;
+    });
   }
 
   function quarterSnapshot(qIdx){
